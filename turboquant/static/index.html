@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TurboQuant</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Core palette - dark, low contrast, highly modern */
+  --bg-app: #0a0a0a;
+  --bg-panel: #121212;
+  --bg-input: #1a1a1a;
+  
+  --border-subtle: #222222;
+  --border-focus: #333333;
+  
+  --text-primary: #ededed;
+  --text-secondary: #888888;
+  --text-tertiary: #555555;
+  
+  /* Accent colors - muted but distinct */
+  --accent-primary: #f0f0f0;
+  --accent-hover: #ffffff;
+  
+  /* Status colors - desaturated */
+  --status-ready: #34d399; /* soft green */
+  --status-wait: #fbbf24;  /* soft amber */
+  --status-err: #f87171;   /* soft red */
+  
+  /* Domain specific */
+  --tq-color: #a78bfa;     /* soft purple */
+  --base-color: #60a5fa;   /* soft blue */
+  
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  
+  --font-sans: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --transition-fast: 0.15s ease;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  height: 56px;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.logo {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.pill b {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.spacer { flex: 1; }
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot-ready { background: var(--status-ready); }
+.dot-wait  { background: var(--status-wait); }
+.dot-err   { background: var(--status-err); }
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+nav {
+  display: flex;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 24px;
+  gap: 24px;
+  flex-shrink: 0;
+}
+
+.tab {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 16px 0;
+  position: relative;
+  transition: color var(--transition-fast);
+}
+
+.tab:hover { color: var(--text-primary); }
+
+.tab.on { color: var(--text-primary); }
+
+.tab.on::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent-primary);
+}
+
+/* ── Panels ──────────────────────────────────────────────────────────────── */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.panel {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-panel);
+}
+
+.panel.on { display: flex; }
+
+/* ── Typography & Forms ──────────────────────────────────────────────────── */
+input[type="number"], textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast);
+}
+
+input[type="number"]:focus, textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.btn {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--border-focus);
+  background: var(--border-subtle);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-send {
+  background: var(--text-primary);
+  color: var(--bg-app);
+  border-color: var(--text-primary);
+}
+
+.btn-send:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-stop {
+  color: var(--status-err);
+  border-color: rgba(248, 113, 113, 0.2);
+  background: rgba(248, 113, 113, 0.05);
+}
+
+.btn-stop:hover {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  color: var(--text-primary);
+  background: var(--bg-input);
+}
+
+/* ── Chat Feed ────────────────────────────────────────────────────────────── */
+#feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  scroll-behavior: smooth;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.msg-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.msg-row.user {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  margin-top: 4px;
+}
+
+.avatar-ai {
+  background: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.avatar-usr {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.msg-body {
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.msg-row.user .msg-body {
+  align-items: flex-end;
+}
+
+.bubble {
+  color: var(--text-primary);
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.msg-row.user .bubble {
+  background: var(--bg-input);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Markdown styling inside bubble */
+.bubble p { margin-bottom: 12px; }
+.bubble p:last-child { margin-bottom: 0; }
+.bubble h1, .bubble h2, .bubble h3 { margin: 24px 0 12px; font-weight: 500; color: var(--text-primary); }
+.bubble h1 { font-size: 18px; }
+.bubble h2 { font-size: 16px; }
+.bubble code { 
+  font-family: var(--font-mono); 
+  font-size: 12px; 
+  background: var(--bg-input); 
+  padding: 2px 4px; 
+  border-radius: 3px; 
+  color: var(--text-secondary);
+}
+.bubble pre { 
+  background: var(--bg-app); 
+  border: 1px solid var(--border-subtle); 
+  border-radius: var(--radius-md); 
+  padding: 16px; 
+  overflow-x: auto; 
+  margin: 16px 0; 
+}
+.bubble pre code { background: none; padding: 0; color: var(--text-primary); }
+.bubble ul, .bubble ol { padding-left: 20px; margin: 12px 0; }
+.bubble li { margin-bottom: 4px; }
+.bubble hr { border: none; border-top: 1px solid var(--border-subtle); margin: 24px 0; }
+.bubble blockquote { border-left: 2px solid var(--border-focus); padding-left: 16px; color: var(--text-secondary); margin: 16px 0; }
+
+.msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.meta-kv {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.meta-kv .tq-val { color: var(--tq-color); }
+.meta-kv .ratio  { color: var(--text-secondary); }
+
+/* ── Live Status Bar ──────────────────────────────────────────────────────── */
+.live-status {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  padding: 8px 24px;
+  background: linear-gradient(to top, var(--bg-panel), transparent);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.live-tps { color: var(--text-primary); }
+
+.pulse {
+  width: 4px;
+  height: 4px;
+  background: var(--text-primary);
+  border-radius: 50%;
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
+
+/* ── Chat Input ───────────────────────────────────────────────────────────── */
+.input-bar {
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border-subtle);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.input-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+textarea#chat-in {
+  flex: 1;
+  padding: 12px 16px;
+  resize: none;
+  min-height: 44px;
+  max-height: 200px;
+  line-height: 1.5;
+}
+
+.input-opts {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.opt input[type=number] {
+  padding: 4px 8px;
+  width: 64px;
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+/* ── Compare Panel ────────────────────────────────────────────────────────── */
+.cmp-top {
+  padding: 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+textarea#cmp-in {
+  padding: 16px;
+  min-height: 100px;
+  resize: vertical;
+}
+
+.cmp-ctrl {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cmp-ctrl > div {
+  display: flex;
+  gap: 16px;
+}
+
+.cmp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.cmp-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.cmp-col {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app);
+}
+
+.cmp-hdr {
+  padding: 12px 16px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cmp-col.tq .cmp-hdr { color: var(--tq-color); }
+.cmp-col.base .cmp-hdr { color: var(--base-color); }
+
+.cmp-hdr span:last-child {
+  color: var(--text-tertiary);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.cmp-content {
+  padding: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Markdown styling inside compare columns */
+.cmp-content p { margin-bottom: 12px; }
+.cmp-content p:last-child { margin-bottom: 0; }
+.cmp-content pre { background: var(--bg-input); padding: 12px; border-radius: var(--radius-sm); overflow-x: auto; margin: 12px 0; border: 1px solid var(--border-subtle); }
+.cmp-content code { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+.cmp-content pre code { color: var(--text-primary); }
+
+.oom-box {
+  color: var(--status-err);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 16px;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: var(--radius-sm);
+  background: rgba(248, 113, 113, 0.05);
+}
+
+.mem-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px;
+  padding: 24px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+}
+
+.mstat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mstat-l {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.mstat-v {
+  font-size: 16px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.c-tq   { color: var(--tq-color); }
+.c-base { color: var(--base-color); }
+.c-save { color: var(--status-ready); }
+.c-ratio{ color: var(--text-secondary); }
+
+/* ── Stats Panel ──────────────────────────────────────────────────────────── */
+.stats-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.stat-group-title {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  padding: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sc-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.sc-val {
+  font-size: 16px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.sc-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: auto;
+}
+
+/* ── Shared Utilities ─────────────────────────────────────────────────────── */
+.hint {
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 13px;
+}
+
+.err {
+  color: var(--status-err);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 16px;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: var(--radius-sm);
+  background: rgba(248, 113, 113, 0.05);
+  margin-bottom: 16px;
+}
+
+.spin {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--text-secondary);
+  border-top-color: var(--text-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-focus); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">TurboQuant</div>
+  <div class="pill" id="h-model">—</div>
+  <div class="pill" id="h-bits">—</div>
+  <div class="pill" id="h-ratio">—</div>
+  <div class="pill" id="h-vram">—</div>
+  <div class="spacer"></div>
+  <div class="pill" id="h-status"><span class="dot dot-wait"></span>connecting</div>
+</header>
+
+<nav>
+  <button class="tab on" data-tab="chat">Chat</button>
+  <button class="tab" data-tab="compare">Compare</button>
+  <button class="tab" data-tab="stats">Stats</button>
+</nav>
+
+<main>
+
+  <div class="panel on" id="panel-chat">
+    <div id="feed">
+      <div class="hint" id="feed-hint">System ready. KV cache compression active.</div>
+    </div>
+    <div class="input-bar">
+      <div id="live-bar" style="display:none" class="live-status">
+        <span class="pulse"></span>
+        <span class="live-tps" id="live-tps">— tok/s</span>
+        <span id="live-tok">0 tokens</span>
+      </div>
+      <div class="input-row">
+        <textarea id="chat-in" rows="1" placeholder="Enter prompt..."></textarea>
+        <button class="btn btn-ghost" onclick="clearChat()">Clear</button>
+        <button class="btn btn-send" id="btn-send" onclick="sendChat()">Send</button>
+        <button class="btn btn-stop" id="btn-stop" onclick="stopChat()" style="display:none">Stop</button>
+      </div>
+      <div class="input-opts">
+        <div class="opt"><span>Max Tokens</span><input type="number" id="in-maxtok" value="512" min="1" max="8192"></div>
+        <div class="opt"><span>Temperature</span><input type="number" id="in-temp" value="1.0" min="0" max="2" step="0.1"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-compare">
+    <div class="cmp-top">
+      <textarea id="cmp-in" placeholder="Enter prompt for baseline comparison..."></textarea>
+      <div class="cmp-ctrl">
+        <div class="opt"><span>Max Tokens</span><input type="number" id="cmp-maxtok" value="300" min="1" max="2048"></div>
+        <button class="btn btn-send" id="btn-cmp" onclick="runCompare()">Run Comparison</button>
+      </div>
+    </div>
+    <div class="cmp-body" id="cmp-body">
+      <div class="hint">Execute a comparison to evaluate TurboQuant efficiency against standard DynamicCache.</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-stats">
+    <div class="stats-body" id="stats-body"><div class="hint">Loading telemetry...</div></div>
+  </div>
+
+</main>
+
+<script>
+marked.setOptions({ breaks: true });
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+    btn.classList.add('on');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('on');
+    if (btn.dataset.tab === 'stats') loadStats();
+  });
+});
+
+// ── Health ────────────────────────────────────────────────────────────────────
+async function pollHealth() {
+  try {
+    const h = await fetch('/health').then(r => r.json());
+    const cls = h.status === 'ready' ? 'dot-ready' : h.status === 'loading' ? 'dot-wait' : 'dot-err';
+    set('h-status', `<span class="dot ${cls}"></span>${h.status}`);
+    if (h.model)  set('h-model', h.model);
+    if (h.key_bits !== undefined) set('h-bits', `K:${h.key_bits}b V:${h.value_bits}b`);
+    if (h.kv_cache) set('h-ratio', `<b>${h.kv_cache.ratio}x</b>`);
+    else if (h.theoretical_compression) set('h-ratio', `~${h.theoretical_compression}x`);
+    if (h.gpu) set('h-vram', `${h.gpu.vram_used} / ${h.gpu.vram_total}`);
+  } catch { set('h-status', `<span class="dot dot-err"></span>offline`); }
+}
+function set(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
+pollHealth();
+setInterval(pollHealth, 10000);
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+const history = [];
+let abort = null;
+let genInterval = null;
+
+const chatIn = document.getElementById('chat-in');
+chatIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+chatIn.addEventListener('input', () => { chatIn.style.height = 'auto'; chatIn.style.height = Math.min(chatIn.scrollHeight, 200) + 'px'; });
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function addMsg(role, text, meta) {
+  document.getElementById('feed-hint')?.remove();
+  const feed = document.getElementById('feed');
+  const isUser = role === 'user';
+  const row = document.createElement('div');
+  row.className = 'msg-row ' + (isUser ? 'user' : 'ai');
+  row.innerHTML = `
+    <div class="avatar ${isUser ? 'avatar-usr' : 'avatar-ai'}">${isUser ? 'U' : 'TQ'}</div>
+    <div class="msg-body">
+      <div class="bubble" id="b${Date.now()}">${isUser ? esc(text) : marked.parse(text)}</div>
+      <div class="msg-meta" id="m${Date.now()}"></div>
+    </div>`;
+  feed.appendChild(row);
+  feed.scrollTop = feed.scrollHeight;
+  return {
+    bubble: row.querySelector('.bubble'),
+    meta:   row.querySelector('.msg-meta'),
+  };
+}
+
+function setMeta(metaEl, tps, tokens, kv) {
+  let html = `<span>${tps} tok/s</span><span>·</span><span>${tokens} tokens</span>`;
+  if (kv) {
+    html += `<span style="color:var(--border-focus)">|</span><div class="meta-kv">
+      <span>TQ <span class="tq-val">${kv.compressed_mb}MB</span></span>
+      <span>Base ${kv.baseline_mb}MB</span>
+      <span class="ratio">${kv.ratio}x</span>
+    </div>`;
+  }
+  metaEl.innerHTML = html;
+}
+
+async function sendChat() {
+  if (abort) return;
+  const text = chatIn.value.trim();
+  if (!text) return;
+  const maxTok = +document.getElementById('in-maxtok').value || 512;
+  const temp   = +document.getElementById('in-temp').value || 1.0;
+
+  chatIn.value = ''; chatIn.style.height = 'auto';
+  history.push({ role: 'user', content: text });
+  addMsg('user', text);
+
+  document.getElementById('btn-send').style.display = 'none';
+  document.getElementById('btn-stop').style.display = '';
+  document.getElementById('live-bar').style.display = 'flex';
+
+  const { bubble, meta } = addMsg('assistant', '');
+  let full = '', tokenCount = 0, finalTps = null, finalKv = null;
+  const t0 = Date.now();
+
+  genInterval = setInterval(() => {
+    const elapsed = (Date.now() - t0) / 1000;
+    const tps = elapsed > 0 ? (tokenCount / elapsed).toFixed(1) : '—';
+    document.getElementById('live-tps').textContent = tps + ' tok/s';
+    document.getElementById('live-tok').textContent = tokenCount + ' tokens';
+  }, 400);
+
+  abort = new AbortController();
+  try {
+    const res = await fetch('/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: abort.signal,
+      body: JSON.stringify({ messages: history, max_tokens: maxTok, temperature: temp, stream: true }),
+    });
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      for (const line of dec.decode(value).split('\n')) {
+        if (!line.startsWith('data: ') || line === 'data: [DONE]') continue;
+        try {
+          const d = JSON.parse(line.slice(6));
+          const chunk = d.choices?.[0]?.delta?.content || '';
+          full += chunk;
+          tokenCount += chunk.length > 0 ? 1 : 0;
+          bubble.innerHTML = marked.parse(full);
+          document.getElementById('feed').scrollTop = 99999;
+          if (d.x_tps)      finalTps = d.x_tps;
+          if (d.x_kv_cache) finalKv  = d.x_kv_cache;
+        } catch {}
+      }
+    }
+    history.push({ role: 'assistant', content: full });
+    if (finalTps) setMeta(meta, finalTps, tokenCount, finalKv);
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      bubble.innerHTML = `<span style="color:var(--status-err)">Error: ${esc(e.message)}</span>`;
+    } else {
+      history.push({ role: 'assistant', content: full });
+      meta.innerHTML = `<span style="color:var(--text-tertiary)">Terminated · ${tokenCount} tokens</span>`;
+    }
+  }
+
+  clearInterval(genInterval);
+  abort = null;
+  document.getElementById('btn-send').style.display = '';
+  document.getElementById('btn-stop').style.display = 'none';
+  document.getElementById('live-bar').style.display = 'none';
+}
+
+function stopChat() {
+  if (abort) abort.abort();
+}
+
+function clearChat() {
+  history.length = 0;
+  document.getElementById('feed').innerHTML =
+    '<div class="hint" id="feed-hint">System ready. KV cache compression active.</div>';
+}
+
+// ── Compare ───────────────────────────────────────────────────────────────────
+async function runCompare() {
+  const prompt = document.getElementById('cmp-in').value.trim();
+  if (!prompt) return;
+  const maxTok = +document.getElementById('cmp-maxtok').value || 300;
+  const btn = document.getElementById('btn-cmp');
+  const body = document.getElementById('cmp-body');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>';
+  body.innerHTML = '<div class="hint">Executing comparison passes...</div>';
+
+  try {
+    const r = await fetch('/v1/compare', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], max_tokens: maxTok }),
+    }).then(res => res.json());
+
+    const baseHtml = r.baseline.oom
+      ? `<div class="oom-box">Out of Memory Event<br>${r.baseline.oom_note}</div>`
+      : marked.parse(r.baseline.output || '');
+
+    body.innerHTML = `
+      <div class="cmp-cols">
+        <div class="cmp-col tq">
+          <div class="cmp-hdr">
+            <span>TurboQuant</span>
+            <span>${r.turboquant.tps} tok/s | ${r.turboquant.completion_tokens} tok</span>
+          </div>
+          <div class="cmp-content">${marked.parse(r.turboquant.output)}</div>
+        </div>
+        <div class="cmp-col base">
+          <div class="cmp-hdr">
+            <span>DynamicCache</span>
+            <span>${r.baseline.oom ? 'OOM' : r.baseline.tps + ' tok/s | ' + r.baseline.completion_tokens + ' tok'}</span>
+          </div>
+          <div class="cmp-content">${baseHtml}</div>
+        </div>
+      </div>
+      <div class="mem-strip">
+        <div class="mstat"><div class="mstat-l">Prompt Tokens</div><div class="mstat-v">${r.prompt_tokens}</div></div>
+        <div class="mstat"><div class="mstat-l">TQ KV Size</div><div class="mstat-v c-tq">${r.turboquant.kv_compressed_mb} MB</div></div>
+        <div class="mstat"><div class="mstat-l">Base KV Size</div><div class="mstat-v c-base">${r.turboquant.kv_baseline_mb} MB</div></div>
+        <div class="mstat"><div class="mstat-l">Net Savings</div><div class="mstat-v c-save">${r.memory_saved_mb} MB</div></div>
+        <div class="mstat"><div class="mstat-l">Ratio</div><div class="mstat-v c-ratio">${r.compression_ratio}x</div></div>
+      </div>`;
+  } catch (e) {
+    body.innerHTML = `<div class="err">Execution failed: ${esc(e.message)}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Run Comparison';
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const [h, s] = await Promise.all([
+      fetch('/health').then(r => r.json()),
+      fetch('/v1/stats').then(r => r.json()),
+    ]);
+
+    const fmtUp = sec => {
+      if (sec < 60) return sec + 's';
+      if (sec < 3600) return `${Math.floor(sec/60)}m ${sec%60}s`;
+      return `${Math.floor(sec/3600)}h ${Math.floor((sec%3600)/60)}m`;
+    };
+
+    const groups = [
+      {
+        title: 'System Telemetry', cards: [
+          { l: 'State',  v: h.status, s: `uptime ${fmtUp(s.uptime_s)}`, c: h.status==='ready'?'c-save':'' },
+          { l: 'Requests', v: s.requests_served },
+          { l: 'Total Tokens', v: s.tokens_generated.toLocaleString() },
+          { l: 'Current TPS', v: s.last_tps, c: 'c-tq' },
+          { l: 'TTFT', v: s.last_ttft_ms ? s.last_ttft_ms + 'ms' : 'N/A' },
+          { l: 'Mean TPS', v: s.avg_tps },
+          { l: 'Codebooks', v: s.codebooks_cached },
+        ]
+      },
+      ...(s.kv_cache ? [{
+        title: 'Cache Metrics (Latest)', cards: [
+          { l: 'Compressed', v: s.kv_cache.compressed_MB + ' MB', c: 'c-tq' },
+          { l: 'Uncompressed', v: s.kv_cache.baseline_bf16_MB + ' MB', c: 'c-base' },
+          { l: 'Factor', v: s.kv_cache.ratio + 'x', c: 'c-ratio' },
+        ]
+      }] : []),
+      ...(h.gpu ? [{
+        title: 'Hardware', cards: [
+          { l: 'Accelerator', v: h.gpu.name.replace('NVIDIA GeForce ','') },
+          { l: 'VRAM Alloc', v: h.gpu.vram_used, s: `${h.gpu.utilization_pct}% utilized` },
+          { l: 'VRAM Avail', v: h.gpu.vram_free },
+        ]
+      }] : []),
+      ...(h.model ? [{
+        title: 'Model Parameters', cards: [
+          { l: 'Identifier', v: h.model },
+          { l: 'K-Quant', v: h.key_bits + 'b', s: 'Lloyd-Max' },
+          { l: 'V-Quant', v: h.value_bits + 'b', s: 'Group' },
+          { l: 'Group Dim', v: h.group_size },
+          { l: 'Est. Ratio', v: '~' + h.theoretical_compression + 'x', c: 'c-ratio' },
+        ]
+      }] : []),
+    ];
+
+    document.getElementById('stats-body').innerHTML = groups.map(g => `
+      <div>
+        <div class="stat-group-title">${g.title}</div>
+        <div class="stat-grid">${g.cards.map(c => `
+          <div class="stat-card">
+            <div class="sc-label">${c.l}</div>
+            <div class="sc-val ${c.c||''}">${c.v}</div>
+            ${c.s !== undefined ? `<div class="sc-sub">${c.s}</div>` : ''}
+          </div>`).join('')}
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    document.getElementById('stats-body').innerHTML = `<div class="err">Telemetry unavailable: ${esc(e.message)}</div>`;
+  }
+}
+</script>
+</body>
+</html>

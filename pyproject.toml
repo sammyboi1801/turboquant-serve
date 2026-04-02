@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "turboquant-serve"
+version = "0.1.0"
+description = "TurboQuant KV-cache compression for any HuggingFace model"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+keywords = ["llm", "kv-cache", "quantization", "inference", "transformers"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "torch>=2.3.0",
+    "transformers>=4.51.0",
+    "accelerate>=0.30.0",
+    "bitsandbytes>=0.43.0",
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+    "pydantic>=2.0.0",
+    "huggingface_hub",
+]
+
+[project.optional-dependencies]
+bench = ["datasets", "nltk"]  # needle-in-haystack benchmark
+dev   = ["pytest", "black", "ruff", "twine", "build"]
+
+[project.scripts]
+tq-serve   = "serve:main"
+tq-compare = "compare:main"
+tq-bench   = "bench.longcontext:main"
+
+[project.urls]
+Homepage   = "https://github.com/sammyboi1801/turboquant-serve"
+Repository = "https://github.com/sammyboi1801/turboquant-serve"
+Issues     = "https://github.com/sammyboi1801/turboquant-serve/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["turboquant*", "bench*"]
+
+[tool.setuptools.package-data]
+turboquant = ["static/*"]
+
+[tool.setuptools]
+py-modules = ["serve", "compare"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

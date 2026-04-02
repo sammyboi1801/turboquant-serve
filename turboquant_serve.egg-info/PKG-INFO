@@ -1,0 +1,249 @@
+Metadata-Version: 2.4
+Name: turboquant-serve
+Version: 0.1.0
+Summary: TurboQuant KV-cache compression for any HuggingFace model
+License: MIT
+Project-URL: Homepage, https://github.com/PrismML/turboquant-serve
+Project-URL: Repository, https://github.com/PrismML/turboquant-serve
+Project-URL: Issues, https://github.com/PrismML/turboquant-serve/issues
+Keywords: llm,kv-cache,quantization,inference,transformers
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: torch>=2.3.0
+Requires-Dist: transformers>=4.51.0
+Requires-Dist: accelerate>=0.30.0
+Requires-Dist: bitsandbytes>=0.43.0
+Requires-Dist: fastapi>=0.111.0
+Requires-Dist: uvicorn[standard]>=0.29.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: huggingface_hub
+Provides-Extra: bench
+Requires-Dist: datasets; extra == "bench"
+Requires-Dist: nltk; extra == "bench"
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: twine; extra == "dev"
+Requires-Dist: build; extra == "dev"
+Dynamic: requires-python
+
+# turboquant-serve
+
+**KV-cache memory compression for any HuggingFace model. Drop-in replacement for `DynamicCache`. No fine-tuning. No calibration data. No kernel changes.**
+
+Implements [TurboQuant (ICLR 2026)](https://arxiv.org/abs/2504.19874): random orthogonal rotation + Lloyd-Max scalar quantization applied to the KV cache at inference time.
+
+---
+
+## What this is
+
+At long contexts, the KV cache becomes the bottleneck — not weights. TurboQuant compresses it 3–4× in Python, letting you run longer contexts on consumer GPUs without OOM.
+
+**What you get:**
+- 3–4× reduction in KV cache memory (tested: Gemma 4 E4B, RTX 4060 8GB)
+- Same output quality for models ≥ 7B at 4-bit keys + 4-bit values
+- Works with any HuggingFace model using standard `DynamicCache`
+- OpenAI-compatible inference server with usage stats and TPS tracking
+
+**What you don't get:**
+- Faster token generation — dequantization happens in Python/PyTorch before attention, so there is no FLOP reduction. Speed is approximately the same as baseline for short contexts, and slightly better at very long contexts where you'd otherwise be memory-bandwidth bound.
+- Magic compatibility — very small models (≤ 1B) or models with `head_dim=64` need 8-bit keys to maintain quality.
+
+> **Note on QJL:** The paper describes Lloyd-Max + 1-bit QJL residual. This implementation uses Lloyd-Max only (MSE). Multiple independent community implementations found QJL *hurts* attention quality — softmax amplifies its variance. See the architecture section below.
+
+---
+
+## Results (Gemma 4 E4B, RTX 4060 Laptop 8GB)
+
+```
+tq-compare --model ./models/gemma4-e4b-4bit --prompt "Explain the Riemann hypothesis"
+```
+
+| Config | KV store | vs bf16 | Quality |
+|--------|----------|---------|---------|
+| Baseline bf16 | 1.6 MB (256 tok) | 1.0× | — |
+| TQ 4-bit K + 4-bit V | 0.5 MB | **3.53×** | identical answer |
+| TQ 4-bit K + 2-bit V | 0.3 MB | **5.29×** | identical answer |
+
+At 32K context: baseline OOMs on 8GB VRAM. TQ 4-bit fits with ~2 GB headroom.
+
+---
+
+## Install
+
+```bash
+pip install turboquant-serve
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/your-username/turboquant-serve
+cd turboquant-serve
+pip install -e .
+```
+
+PyTorch with CUDA must be installed separately:
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu121
+```
+
+---
+
+## Server
+
+```bash
+# Any HuggingFace model — pre-quantized or full precision
+tq-serve --model ./models/gemma4-e4b-4bit --key-bits 4 --value-bits 4 --port 8000
+
+# Full precision (auto-quantized on-the-fly with NF4 if VRAM < 16GB)
+tq-serve --model google/gemma-4-E4B-it --key-bits 4 --value-bits 4
+
+# Any other model
+tq-serve --model unsloth/Qwen3-8B --key-bits 4 --value-bits 4
+```
+
+OpenAI-compatible API:
+
+```bash
+# Non-streaming — includes usage + TPS
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 200}'
+
+# Streaming
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 200, "stream": true}'
+
+# Health + stats
+curl http://localhost:8000/health
+curl http://localhost:8000/v1/stats
+```
+
+Non-streaming response includes:
+```json
+{
+  "choices": [...],
+  "usage": {"prompt_tokens": 12, "completion_tokens": 47, "total_tokens": 59},
+  "x_tps": 18.4
+}
+```
+
+Streaming final chunk includes `x_tps` and `x_ttft_ms` (time-to-first-token in ms).
+
+---
+
+## Library
+
+```python
+from turboquant import TurboQuantCache
+
+model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.1-8B", device_map="auto")
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.1-8B")
+
+cache = TurboQuantCache(key_bits=4, value_bits=4)
+inputs = tokenizer("Hello!", return_tensors="pt").to(model.device)
+out = model.generate(**inputs, past_key_values=cache, max_new_tokens=200)
+
+# Inspect compression
+print(cache.compression_stats())
+# {'compressed_MB': 0.5, 'baseline_MB': 1.6, 'ratio': 3.53, 'key_bits': 4}
+```
+
+---
+
+## CLI tools
+
+| Command | What it does |
+|---------|-------------|
+| `tq-serve` | OpenAI-compatible inference server |
+| `tq-compare` | Side-by-side output: baseline vs TurboQuant |
+| `tq-bench` | Needle-in-haystack recall at increasing context lengths |
+
+```bash
+# Compare outputs side by side
+tq-compare --model ./models/gemma4-e4b-4bit --prompt "What is entropy?" --key-bits 4
+
+# Needle-in-haystack: does the model recall a fact buried in a long document?
+tq-bench --model ./models/gemma4-e4b-4bit --lengths 512 1024 4096 8192
+
+# Memory benchmark
+tq-serve --model ./models/gemma4-e4b-4bit --benchmark --prompt-len 1024
+```
+
+---
+
+## Architecture
+
+```
+TurboQuantCache (subclass of DynamicCache)
+│
+├── update(k, v, layer_idx)          ← called by transformers on every forward pass
+│   ├── rotate: k, v = k @ R, v @ R  ← random orthogonal matrix, seeded by head_dim
+│   ├── keys:   normalize → Lloyd-Max encode → bit-pack → store uint8
+│   ├── values: group min/max quant  → bit-pack → store uint8
+│   └── return _decode()             ← dequantized k, v for attention
+│
+└── _decode(layer_idx)
+    ├── unpack + Lloyd-Max decode → restore magnitude → k @ R.T
+    └── group dequantize → v @ R.T
+```
+
+**Rotation:** A fixed random orthogonal matrix spreads energy evenly across dimensions before quantization, reducing worst-case quantization error significantly vs. quantizing raw activations.
+
+**Keys vs values:** Keys are normalized to the unit sphere then Lloyd-Max quantized (MSE-optimal for the Beta distribution prior). Values are group-quantized with affine scaling (min/max per group of 32).
+
+**Why no QJL:** QJL provides unbiased inner product estimates but introduces variance. Softmax in attention amplifies this variance exponentially. MSE-only quantization has lower variance and consistently achieves better end-task quality. Confirmed by multiple independent implementations.
+
+---
+
+## Bit config guide
+
+| Model size | Recommended | Notes |
+|------------|-------------|-------|
+| ≥ 13B | `--key-bits 4 --value-bits 4` | Full quality at 3.5× |
+| 7B–13B | `--key-bits 4 --value-bits 4` | Tested, works well |
+| 1B–7B | `--key-bits 8 --value-bits 4` | head_dim=64 needs 8-bit keys |
+| < 1B | Not recommended | Tiny models have no redundancy to absorb compression loss |
+
+---
+
+## Roadmap
+
+- [ ] Triton fused dequant+attention kernel — compute attention on quantized K/V without materializing bf16 (true FLOP + bandwidth reduction)
+- [ ] Residual window — keep last N tokens in fp16 for recency quality
+- [ ] Outlier-aware mixed precision — more bits for outlier channels
+- [ ] vLLM integration
+- [ ] Multi-GPU / tensor parallel support
+
+---
+
+## Citation
+
+```bibtex
+@inproceedings{zandieh2026turboquant,
+  title={TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate},
+  author={Zandieh, Amir and Daliri, Majid and Hadian, Majid and Mirrokni, Vahab},
+  booktitle={ICLR},
+  year={2026}
+}
+```
+
+---
+
+## Related work
+
+- [0xSero/turboquant](https://github.com/0xSero/turboquant) — vLLM + Triton kernels
+- [back2matching/turboquant](https://github.com/back2matching/turboquant) — pip package
+- [scos-lab/turboquant](https://github.com/scos-lab/turboquant) — research analysis
+- [TheTom/turboquant_plus](https://github.com/TheTom/turboquant_plus) — llama.cpp / Metal

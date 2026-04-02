@@ -1,0 +1,4 @@
+[console_scripts]
+tq-bench = bench.longcontext:main
+tq-compare = compare:main
+tq-serve = serve:main
