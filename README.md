@@ -12,21 +12,21 @@ Implements [TurboQuant (ICLR 2026)](https://arxiv.org/abs/2504.19874): random or
 
 ## What this does
 
-At long contexts, the KV cache becomes the memory bottleneck — not the weights. On an 8 GB GPU with a 4B model, there is almost no VRAM left for KV cache. TurboQuant compresses it 3–4× in Python, letting you run longer contexts on consumer hardware without OOM.
+At long contexts, the KV cache becomes the memory bottleneck - not the weights. On an 8 GB GPU with a 4B model, there is almost no VRAM left for KV cache. TurboQuant compresses it 3–4× in Python, letting you run longer contexts on consumer hardware without OOM.
 
 **What you get:**
 - 3–4× reduction in KV cache memory at 4-bit keys + 4-bit values
 - Same output quality for models ≥ 7B (tested: Gemma 4 E4B on RTX 4060 8 GB)
-- Works with any HuggingFace model using standard `DynamicCache` — Gemma, Llama, Qwen, Mistral, Phi, DeepSeek
-- OpenAI-compatible inference server — plug into Open WebUI, LiteLLM, or any OpenAI client
-- Built-in web UI at `/ui` — chat, compare TQ vs baseline, live GPU stats
+- Works with any HuggingFace model using standard `DynamicCache` - Gemma, Llama, Qwen, Mistral, Phi, DeepSeek
+- OpenAI-compatible inference server - plug into Open WebUI, LiteLLM, or any OpenAI client
+- Built-in web UI at `/ui` - chat, compare TQ vs baseline, live GPU stats
 - `/v1/compare` endpoint: run the same prompt with TurboQuant and DynamicCache side-by-side on the already-loaded model
 
 **What you don't get:**
-- Faster tokens — dequantization happens in Python/PyTorch before attention, no FLOP reduction. Speed is similar to or slightly slower than baseline. A Triton fused kernel (roadmap) would fix this.
-- Magic compatibility — models ≤ 1B or with `head_dim=64` may produce worse output at 4-bit keys; use `--key-bits 8` for those.
+- Faster tokens - dequantization happens in Python/PyTorch before attention, no FLOP reduction. Speed is similar to or slightly slower than baseline. A Triton fused kernel (roadmap) would fix this.
+- Magic compatibility - models ≤ 1B or with `head_dim=64` may produce worse output at 4-bit keys; use `--key-bits 8` for those.
 
-> **Why MSE-only, not QJL:** The TurboQuant paper describes Lloyd-Max + 1-bit QJL residual. This implementation uses Lloyd-Max MSE-only. Multiple independent community implementations found QJL hurts attention quality because softmax amplifies its variance. MSE-only wins empirically.
+> **Why MSE-only, not QJL:** The TurboQuant paper describes Lloyd-Max + 1-bit QJL residual. This implementation uses Lloyd-Max MSE-only. Community implementations ([scos-lab/turboquant](https://github.com/scos-lab/turboquant), [back2matching/turboquant](https://github.com/back2matching/turboquant)) found QJL adds variance that softmax amplifies exponentially, causing quality degradation in practice. MSE-only wins empirically despite being theoretically biased.
 
 ---
 
@@ -36,8 +36,8 @@ At long contexts, the KV cache becomes the memory bottleneck — not the weights
 
 | Environment | Status |
 |-------------|--------|
-| CUDA GPU (recommended) | Full support — NF4 auto-quantization for VRAM < 16 GB |
-| CPU only | Works — loads in float32, no bitsandbytes. Inference is slow. Use small models (≤ 1B). |
+| CUDA GPU (recommended) | Full support - NF4 auto-quantization for VRAM < 16 GB |
+| CPU only | Works - loads in float32, no bitsandbytes. Inference is slow. Use small models (≤ 1B). |
 | Pre-quantized bnb checkpoint | Requires CUDA. Use a full-precision model on CPU. |
 
 ---
@@ -73,29 +73,29 @@ pip install -e .
 
 ## Downloading models from HuggingFace
 
-Pass any HuggingFace repo ID directly — the model downloads automatically on first run and caches in `~/.cache/huggingface/`.
+Pass any HuggingFace repo ID directly - the model downloads automatically on first run and caches in `~/.cache/huggingface/`.
 
 ```bash
-# Public model — no login needed
+# Public model - no login needed
 tq-serve --model Qwen/Qwen2.5-1.5B-Instruct --key-bits 8 --value-bits 4
 
-# Gated model (Llama, Gemma) — login first
+# Gated model (Llama, Gemma) - login first
 huggingface-cli login
 tq-serve --model meta-llama/Llama-3.1-8B-Instruct --key-bits 4 --value-bits 4
 
-# Local path — pre-downloaded checkpoint
+# Local path - pre-downloaded checkpoint
 tq-serve --model ./models/gemma4-e4b-4bit --key-bits 4 --value-bits 4
 ```
 
 The server prints download progress. First run for a large model (e.g. 8B at bf16 = ~16 GB) takes a few minutes depending on your connection.
 
-**Common error — gated model without login:**
+**Common error - gated model without login:**
 ```
 OSError: You are trying to access a gated repo.
 Fix: huggingface-cli login
 ```
 
-**Common error — not enough disk space:**
+**Common error - not enough disk space:**
 ```
 OSError: [Errno 28] No space left on device
 Fix: free disk space or set HF_HOME to a drive with more space
@@ -149,11 +149,11 @@ Open **http://localhost:8000/ui** for the web interface.
 
 The server ships a built-in web UI at `/ui`:
 
-- **Chat tab** — streaming chat with live TPS counter, Stop button, KV cache stats after each message
-- **Compare tab** — send one prompt, see TurboQuant and DynamicCache outputs side-by-side with memory usage
-- **Stats tab** — GPU VRAM, request throughput, codebook status
+- **Chat tab** - streaming chat with live TPS counter, Stop button, KV cache stats after each message
+- **Compare tab** - send one prompt, see TurboQuant and DynamicCache outputs side-by-side with memory usage
+- **Stats tab** - GPU VRAM, request throughput, codebook status
 
-No setup required — it's included in the pip package.
+No setup required - it's included in the pip package.
 
 ---
 
@@ -164,14 +164,14 @@ No setup required — it's included in the pip package.
 | Run any HF model with compressed KV cache | `tq-serve --model <repo-id-or-path>` |
 | Open Web UI (chat, compare, stats) | Open `http://localhost:8000/ui` |
 | Plug into Open WebUI / SillyTavern / LiteLLM | Point at `http://localhost:8000` as OpenAI provider |
-| Multi-turn chat | Any OpenAI client — send full message history each turn |
+| Multi-turn chat | Any OpenAI client - send full message history each turn |
 | Long context without OOM | TurboQuant compresses the KV cache built per request |
 | Compare TQ output vs baseline + memory | `POST /v1/compare` or Compare tab in UI |
 | Memory benchmark at a given context length | `tq-serve --benchmark --prompt-len 4096` |
 | Needle-in-haystack recall test | `tq-bench --model ... --lengths 1024 4096 8192` |
 | Use as a Python library | `from turboquant import TurboQuantCache` |
 
-**Multi-turn chat** works today — the server is stateless like the OpenAI API. The client sends full conversation history each turn; the server builds the KV cache fresh and compresses it. TurboQuant's benefit: conversations can be longer before OOM. A 10-turn conversation that would normally exhaust VRAM on an 8 GB GPU runs fine with TurboQuant.
+**Multi-turn chat** works today - the server is stateless like the OpenAI API. The client sends full conversation history each turn; the server builds the KV cache fresh and compresses it. TurboQuant's benefit: conversations can be longer before OOM. A 10-turn conversation that would normally exhaust VRAM on an 8 GB GPU runs fine with TurboQuant.
 
 ---
 
@@ -252,7 +252,7 @@ curl http://localhost:8000/v1/chat/completions \
 
 ### `POST /v1/compare`
 
-Run the same prompt with TurboQuant and DynamicCache back-to-back on the already-loaded model. No double model load — safe on 8 GB VRAM.
+Run the same prompt with TurboQuant and DynamicCache back-to-back on the already-loaded model. No double model load - safe on 8 GB VRAM.
 
 ```bash
 curl http://localhost:8000/v1/compare \
@@ -331,7 +331,7 @@ print(cache.compression_stats())
 | Command | What it does |
 |---------|-------------|
 | `tq-serve` | OpenAI-compatible inference server with web UI |
-| `tq-compare` | CLI quality comparison: TQ vs DynamicCache (loads model twice — use `/v1/compare` for large models) |
+| `tq-compare` | CLI quality comparison: TQ vs DynamicCache (loads model twice - use `/v1/compare` for large models) |
 | `tq-bench` | Needle-in-haystack recall at increasing context lengths |
 
 ```bash
@@ -342,7 +342,7 @@ tq-bench --model ./models/gemma4-e4b-4bit --lengths 512 1024 4096 8192
 tq-serve --model ./models/gemma4-e4b-4bit --benchmark --prompt-len 2048
 ```
 
-> **Note on `tq-compare`:** Loads the model twice — will OOM on large models (≥ 4B) on 8 GB GPU. Use the server's `/v1/compare` endpoint instead.
+> **Note on `tq-compare`:** Loads the model twice - will OOM on large models (≥ 4B) on 8 GB GPU. Use the server's `/v1/compare` endpoint instead.
 
 ---
 
@@ -354,25 +354,6 @@ tq-serve --model ./models/gemma4-e4b-4bit --benchmark --prompt-len 2048
 | 7B–13B | `--key-bits 4 --value-bits 4` | Tested, works well |
 | 1B–7B | `--key-bits 8 --value-bits 4` | `head_dim=64` models need 8-bit keys |
 | < 1B | `--key-bits 8 --value-bits 8` | Too little redundancy at 4-bit |
-
----
-
-## Publishing to PyPI (auto on GitHub release)
-
-The repo includes a GitHub Actions workflow that publishes to PyPI automatically whenever you create a GitHub Release. Uses [OIDC trusted publishing](https://docs.pypi.org/trusted-publishers/) — no API token needed.
-
-**One-time setup on PyPI:**
-1. Go to [pypi.org → Your account → Publishing](https://pypi.org/manage/account/publishing/)
-2. Add a new trusted publisher:
-   - Owner: `PrismML`
-   - Repository: `turboquant-serve`
-   - Workflow: `publish.yml`
-   - Environment: `pypi`
-
-**To publish a new version:**
-1. Bump the version in `pyproject.toml` and `turboquant/__init__.py`
-2. Commit and push
-3. Create a GitHub Release — PyPI publish runs automatically
 
 ---
 
@@ -398,16 +379,16 @@ TurboQuantCache (subclass of DynamicCache)
 
 **Codebook sharing:** Codebooks are fitted once at server startup via a warmup forward pass and shared across all requests. Re-fitting per request would add ~1s latency.
 
-**Why no QJL:** QJL provides unbiased inner product estimates but introduces variance. Softmax amplifies this variance exponentially. MSE-only consistently achieves better end-task quality — confirmed by multiple independent implementations.
+**Why no QJL:** QJL provides unbiased inner product estimates but introduces variance. Softmax amplifies this variance exponentially - meaning low-variance MSE beats unbiased-but-high-variance QJL in practice. Confirmed empirically by [scos-lab/turboquant](https://github.com/scos-lab/turboquant) and [back2matching/turboquant](https://github.com/back2matching/turboquant), independent of this implementation.
 
 ---
 
 ## Roadmap
 
-- [ ] Triton fused dequant+attention kernel — compute attention directly on quantized K/V without materializing bf16 (true memory bandwidth + FLOP reduction)
-- [ ] Residual window — keep last N tokens in fp16 for recency quality
-- [ ] Outlier-aware mixed precision — more bits for outlier channels
-- [ ] Prefix caching — reuse KV cache across requests with shared prefixes
+- [ ] Triton fused dequant+attention kernel - compute attention directly on quantized K/V without materializing bf16 (true memory bandwidth + FLOP reduction)
+- [ ] Residual window - keep last N tokens in fp16 for recency quality
+- [ ] Outlier-aware mixed precision - more bits for outlier channels
+- [ ] Prefix caching - reuse KV cache across requests with shared prefixes
 - [ ] vLLM integration
 - [ ] Multi-GPU / tensor parallel support
 
@@ -424,10 +405,10 @@ This project implements the algorithm from:
 The server architecture (OpenAI-compatible API, streaming, warmup, codebook caching) is inspired by [llama.cpp server](https://github.com/ggerganov/llama.cpp/tree/master/examples/server) and [Ollama](https://github.com/ollama/ollama). The web UI design follows llama.cpp's minimal dark aesthetic.
 
 Related community implementations of TurboQuant:
-- [0xSero/turboquant](https://github.com/0xSero/turboquant) — vLLM + Triton kernels
-- [back2matching/turboquant](https://github.com/back2matching/turboquant) — pip package
-- [scos-lab/turboquant](https://github.com/scos-lab/turboquant) — research analysis
-- [TheTom/turboquant_plus](https://github.com/TheTom/turboquant_plus) — llama.cpp / Metal
+- [0xSero/turboquant](https://github.com/0xSero/turboquant) - vLLM + Triton kernels
+- [back2matching/turboquant](https://github.com/back2matching/turboquant) - pip package
+- [scos-lab/turboquant](https://github.com/scos-lab/turboquant) - research analysis
+- [TheTom/turboquant_plus](https://github.com/TheTom/turboquant_plus) - llama.cpp / Metal
 
 ---
 

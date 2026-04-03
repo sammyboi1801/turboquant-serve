@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="turboquant-serve",
-    version="0.1.0",
+    version="0.1.1",
     description="TurboQuant KV-cache compression for any HuggingFace model",
     packages=find_packages(),
     py_modules=["serve", "compare"],

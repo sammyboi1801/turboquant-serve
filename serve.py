@@ -35,7 +35,7 @@ _STATIC = Path(__file__).parent / "turboquant" / "static"
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="TurboQuant Inference Server", version="0.1.0")
+app = FastAPI(title="TurboQuant Inference Server", version="0.1.1")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -549,7 +549,7 @@ def _print_banner(args, host: str, port: int):
 
     print()
     print("  ╔" + "═" * (W + 2) + "╗")
-    print(f"  ║{'TurboQuant Inference Server  v0.1.0':^{W+2}}║")
+    print(f"  ║{'TurboQuant Inference Server  v0.1.1':^{W+2}}║")
     print("  ╠" + "═" * (W + 2) + "╣")
     row(f"Model      {model_name}")
     row(f"Keys       {args.key_bits}-bit    Values  {args.value_bits}-bit    Group  {args.group_size}")
