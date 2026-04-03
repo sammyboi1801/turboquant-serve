@@ -1,5 +1,5 @@
 """
-turboquant — KV-cache compression for HuggingFace transformers.
+turboquant: KV-cache compression for HuggingFace transformers.
 
 Drop-in replacement for DynamicCache:
     from turboquant import TurboQuantCache
@@ -20,4 +20,4 @@ __all__ = [
     "get_dims",
 ]
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"

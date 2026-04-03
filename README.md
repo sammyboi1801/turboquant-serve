@@ -1,4 +1,6 @@
 # turboquant-serve
+![img_1.png](img_1.png)
+![img.png](img.png)
 
 **KV-cache memory compression for any HuggingFace model. Drop-in replacement for `DynamicCache`. No fine-tuning. No calibration data. No kernel changes.**
 
@@ -32,7 +34,7 @@ At long contexts, the KV cache becomes the memory bottleneck - not the weights. 
 
 ## Does it work without a GPU?
 
-**Yes**, with caveats:
+Yes, with caveats:
 
 | Environment | Status |
 |-------------|--------|
@@ -153,8 +155,6 @@ The server ships a built-in web UI at `/ui`:
 - **Compare tab** - send one prompt, see TurboQuant and DynamicCache outputs side-by-side with memory usage
 - **Stats tab** - GPU VRAM, request throughput, codebook status
 
-No setup required - it's included in the pip package.
-
 ---
 
 ## What you can do
@@ -171,7 +171,7 @@ No setup required - it's included in the pip package.
 | Needle-in-haystack recall test | `tq-bench --model ... --lengths 1024 4096 8192` |
 | Use as a Python library | `from turboquant import TurboQuantCache` |
 
-**Multi-turn chat** works today - the server is stateless like the OpenAI API. The client sends full conversation history each turn; the server builds the KV cache fresh and compresses it. TurboQuant's benefit: conversations can be longer before OOM. A 10-turn conversation that would normally exhaust VRAM on an 8 GB GPU runs fine with TurboQuant.
+**Multi-turn chat** works today. The server is stateless - clients send full conversation history each turn, the server rebuilds the KV cache fresh. The benefit is longer conversations before OOM, not prefix reuse.
 
 ---
 

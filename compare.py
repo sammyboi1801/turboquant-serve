@@ -1,5 +1,5 @@
 """
-compare.py — Side-by-side quality comparison: TurboQuant vs standard KV cache.
+compare.py: Side-by-side quality comparison, TurboQuant vs standard KV cache.
 
 Usage:
     tq-compare --model google/gemma-4-E4B-it --prompt "Explain quantum entanglement"

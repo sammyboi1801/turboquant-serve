@@ -1,5 +1,5 @@
 """
-turboquant/quantizer.py — Group-wise min/max quantizer for value compression.
+turboquant/quantizer.py: Group-wise min/max quantizer for value compression.
 
 Packs multiple low-bit values into uint8 bytes via vectorized bit-shifting.
 Supports 2, 4, and 8 bits per element with configurable group size.
@@ -33,10 +33,10 @@ class GroupQuantizer:
         Quantize x along the last dimension.
 
         Returns:
-            packed  — uint8 tensor of packed indices
-            scale   — float tensor, shape (..., n_groups)
-            zero    — float tensor, shape (..., n_groups)
-            meta    — dict with padding info needed for dequantize
+            packed: uint8 tensor of packed indices
+            scale: float tensor, shape (..., n_groups)
+            zero: float tensor, shape (..., n_groups)
+            meta: dict with padding info needed for dequantize
         """
         D = x.shape[-1]
         prefix = x.shape[:-1]

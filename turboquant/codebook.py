@@ -1,8 +1,8 @@
 """
-turboquant/codebook.py — Lloyd-Max scalar codebook for key quantization.
+turboquant/codebook.py: Lloyd-Max scalar codebook for key quantization.
 
 Uses a Beta distribution prior fitted to rotated, unit-normalized key vectors.
-MSE-optimal quantization — QJL correction intentionally omitted (hurts attention
+MSE-optimal quantization. QJL correction intentionally omitted (hurts attention
 quality because softmax amplifies its variance).
 """
 

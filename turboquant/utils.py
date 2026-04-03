@@ -1,5 +1,5 @@
 """
-turboquant/utils.py — Model loading and config helpers.
+turboquant/utils.py: Model loading and config helpers.
 
 Supports:
   - Pre-quantized bitsandbytes checkpoints (requires CUDA)
@@ -24,10 +24,9 @@ def load_model(model_id: str, force_4bit: bool = False):
     """
     Load any HuggingFace causal LM for inference.
 
-    Behaviour by environment:
-      - CUDA GPU < 16 GB VRAM  →  NF4 on-the-fly quantization (bitsandbytes)
-      - CUDA GPU ≥ 16 GB VRAM  →  bfloat16, no quantization
-      - CPU only               →  float32, no quantization (slow — use small models)
+    On CUDA with < 16 GB VRAM: applies NF4 on-the-fly quantization (bitsandbytes).
+    On CUDA with >= 16 GB VRAM: loads in bfloat16, no quantization.
+    On CPU: loads in float32, no quantization (slow, use small models).
 
     Pre-quantized bitsandbytes checkpoints are loaded as-is and require CUDA.
     Passing a HuggingFace repo ID will download the model automatically on first run
@@ -48,7 +47,7 @@ def load_model(model_id: str, force_4bit: bool = False):
         print(f"[load] GPU: {torch.cuda.get_device_name(0)}  VRAM: {total_gb:.1f} GB")
     else:
         print(
-            "[load] No CUDA GPU detected — running on CPU.\n"
+            "[load] No CUDA GPU detected - running on CPU.\n"
             "         Inference will be slow. For best results use a GPU.\n"
             "         Only full-precision models are supported on CPU\n"
             "         (bitsandbytes NF4 quantization requires CUDA)."

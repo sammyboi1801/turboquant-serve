@@ -1,5 +1,5 @@
 """
-serve.py — TurboQuant KV-cache compressed inference server (OpenAI-compatible).
+serve.py: TurboQuant KV-cache compressed inference server (OpenAI-compatible).
 
 Usage:
     tq-serve --model ./models/gemma4-e4b-4bit --key-bits 4 --value-bits 4 --port 8000
@@ -35,7 +35,7 @@ _STATIC = Path(__file__).parent / "turboquant" / "static"
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="TurboQuant Inference Server", version="0.1.1")
+app = FastAPI(title="TurboQuant Inference Server", version="0.1.2")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -51,7 +51,7 @@ _tq_args       = None
 _startup_time  = time.time()
 _warmed_up     = False
 
-# Codebook dict shared across all request caches — fitted once at warmup
+# Codebook dict shared across all request caches, fitted once at warmup
 _shared_codebooks: dict = {}
 
 # Running stats
@@ -111,7 +111,7 @@ def health():
             "compressed_MB":  round(_last_kv_stats["compressed_MB"], 3),
             "baseline_bf16_MB": round(_last_kv_stats["baseline_MB"], 3),
             "ratio":          round(_last_kv_stats["ratio"], 2),
-            "note": "last request — DynamicCache would have used baseline_bf16_MB",
+            "note": "last request - DynamicCache would have used baseline_bf16_MB",
         }
 
     if torch.cuda.is_available():
@@ -193,7 +193,7 @@ def compare(req: CompareRequest):
     Returns both outputs plus actual VRAM delta for each run.
     """
     if not _warmed_up:
-        raise HTTPException(status_code=503, detail="Server warming up — check /health")
+        raise HTTPException(status_code=503, detail="Server warming up - check /health")
     if not req.messages:
         raise HTTPException(status_code=400, detail="messages cannot be empty")
 
@@ -254,7 +254,7 @@ def compare(req: CompareRequest):
             "kv_mb":     round(tq_stats["baseline_MB"], 3),
             "oom":       True,
             "oom_note":  (
-                f"DynamicCache ran out of memory at {prompt_tokens} tokens — "
+                f"DynamicCache ran out of memory at {prompt_tokens} tokens - "
                 f"would need {tq_stats['baseline_MB']:.1f} MB for KV cache. "
                 f"TurboQuant used only {tq_stats['compressed_MB']:.1f} MB."
             ),
@@ -284,7 +284,7 @@ def chat_completions(req: ChatRequest):
     if not _warmed_up:
         raise HTTPException(
             status_code=503,
-            detail="Server is warming up — codebooks not ready yet. "
+            detail="Server is warming up - codebooks not ready yet. "
                    "Check /health for status."
         )
     if not req.messages:
@@ -549,7 +549,7 @@ def _print_banner(args, host: str, port: int):
 
     print()
     print("  ╔" + "═" * (W + 2) + "╗")
-    print(f"  ║{'TurboQuant Inference Server  v0.1.1':^{W+2}}║")
+    print(f"  ║{'TurboQuant Inference Server  v0.1.2':^{W+2}}║")
     print("  ╠" + "═" * (W + 2) + "╣")
     row(f"Model      {model_name}")
     row(f"Keys       {args.key_bits}-bit    Values  {args.value_bits}-bit    Group  {args.group_size}")

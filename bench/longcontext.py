@@ -1,5 +1,5 @@
 """
-bench/longcontext.py — Needle-in-haystack test at increasing context lengths.
+bench/longcontext.py: Needle-in-haystack test at increasing context lengths.
 
 Tests whether TurboQuant preserves recall of a hidden fact buried deep in
 a long document, at multiple context lengths. Mirrors the evaluation used

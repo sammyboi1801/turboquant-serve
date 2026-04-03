@@ -1,5 +1,5 @@
 """
-turboquant/cache.py — TurboQuantCache: compressed KV cache for HuggingFace models.
+turboquant/cache.py: TurboQuantCache, compressed KV cache for HuggingFace models.
 
 Drop-in replacement for DynamicCache. Pass to model.generate() and tokens are
 compressed on the fly with no changes to model code.
@@ -8,7 +8,7 @@ Algorithm:
   Keys:   rotate (random orthogonal Q) → L2-normalize → Lloyd-Max encode → bit-pack
   Values: rotate → group-wise min/max quantize → bit-pack
 
-No QJL correction — omitted intentionally. QJL hurts attention quality because
+No QJL correction - omitted intentionally. QJL hurts attention quality because
 softmax amplifies its variance. MSE-only quantization has lower variance and wins.
 """
 
@@ -25,7 +25,7 @@ from turboquant.quantizer import GroupQuantizer
 class TurboQuantCache(DynamicCache):
     """
     Subclasses DynamicCache and overrides update() to compress K/V on the fly.
-    model.generate() calls this transparently — no manual decode loop needed.
+    model.generate() calls this without any changes to model code.
     """
 
     def __init__(
